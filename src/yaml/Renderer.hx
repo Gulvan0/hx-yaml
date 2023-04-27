@@ -3,7 +3,6 @@ package yaml;
 import Type;
 import yaml.util.StringMap;
 import yaml.util.IntMap;
-import haxe.Utf8;
 import haxe.io.Bytes;
 import yaml.YamlType;
 import yaml.schema.DefaultSchema;
@@ -125,12 +124,8 @@ class Renderer
 		return false;
 	}
 
-	function writeScalar(object:String)
+	function writeScalar(object:UnicodeString)
 	{
-		#if sys
-		object = Utf8.encode(object);
-		#end
-		
 		var isQuoted = false;
 		var checkpoint = 0;
 		var position = -1;
@@ -138,16 +133,16 @@ class Renderer
 		result = '';
 
 		if (0 == object.length || 
-			CHAR_SPACE == Utf8.charCodeAt(object, 0) || 
-			CHAR_SPACE == Utf8.charCodeAt(object, Utf8.length(object) - 1)) 
+			CHAR_SPACE == object.charCodeAt(0) || 
+			CHAR_SPACE == object.charCodeAt(object.length - 1)) 
 		{
 			isQuoted = true;
 		}
 
-		var length = Utf8.length(object);
+		var length = object.length;
 		while (++position < length)
 		{
-			var character = Utf8.charCodeAt(object, position);
+			var character = object.charCodeAt(position);
 			if (!isQuoted) 
 			{
 				if (CHAR_TAB == character ||
@@ -184,7 +179,7 @@ class Renderer
 				(0x0E000 <= character && character <= 0x00FFFD) ||
 				(0x10000 <= character && character <= 0x10FFFF)))
 			{
-				result += yaml.util.Utf8.substring(object, checkpoint, position);
+				result += object.substring(checkpoint, position);
 				
 				if (ESCAPE_SEQUENCES.exists(character))
 				{
@@ -202,7 +197,7 @@ class Renderer
 
 		if (checkpoint < position)
 		{
-			result += yaml.util.Utf8.substring(object, checkpoint, position);
+			result += object.substring(checkpoint, position);
 		}
 
 		if (!isQuoted && testImplicitResolving(result))
@@ -214,10 +209,6 @@ class Renderer
 		{
 			result = '"' + result + '"';
 		}
-		
-		#if sys
-		result = Utf8.decode(result);
-		#end
 	}
 
 	function writeFlowSequence(level:Int, object:Array<Dynamic>) 
@@ -413,7 +404,7 @@ class Renderer
 			if ((null != type.dumper) &&
 				type.dumper.skip != true &&
 				(null == type.dumper.kind || kind == type.dumper.kind) &&
-				(null == type.dumper.instanceOf || Std.is(object, type.dumper.instanceOf) &&
+				(null == type.dumper.instanceOf || Std.isOfType(object, type.dumper.instanceOf) &&
 				(null == type.dumper.predicate  || type.dumper.predicate(object))))
 			{
 				tag = explicit ? type.tag : '?';
@@ -518,7 +509,7 @@ class Renderer
 			case TFloat: "float";
 			case TBool: "boolean";
 			case TObject:
-				if (Std.is(object, Array)) "array";
+				if (Std.isOfType(object, Array)) "array";
 				else "object";
 			case TFunction: "function";
 			case TClass(c):
